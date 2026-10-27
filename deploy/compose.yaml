@@ -21,12 +21,12 @@ services:
       S3_ENDPOINT: http://storage-silo:9000
       S3_BUCKET: myapp # change: app name
     # Credentials arrive as files under /run/secrets/<NAME>, never as variables.
-    secrets:
+    secrets: # change: the credentials of your services, then your secret names
       - DATABASE_URL
       - REDIS_URL
       - S3_ACCESS_KEY
       - S3_SECRET_KEY
-      - EXAMPLE_API_KEY
+      - EXAMPLE_API_KEY # change: each name from platform.yaml -> secrets
     healthcheck:
       test:
         - CMD
@@ -74,7 +74,7 @@ networks:
 
 # Each secret: the file the platform writes. Platform credentials (DATABASE_URL, REDIS_URL,
 # S3_*, OIDC_*) exist for the services in platform.yaml; others are your `secrets`.
-secrets:
+secrets: # change: one entry per name in the service's list above
   DATABASE_URL:
     file: ${APP_SECRETS}/DATABASE_URL
   REDIS_URL:
@@ -83,5 +83,5 @@ secrets:
     file: ${APP_SECRETS}/S3_ACCESS_KEY
   S3_SECRET_KEY:
     file: ${APP_SECRETS}/S3_SECRET_KEY
-  EXAMPLE_API_KEY:
+  EXAMPLE_API_KEY: # change: your secret name, in both places on this entry
     file: ${APP_SECRETS}/EXAMPLE_API_KEY
