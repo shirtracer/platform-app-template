@@ -44,13 +44,16 @@ jobs:
       - name: Editor schema equals the bundle's
         run: cmp .platform/platform.schema.json "$RUNNER_TEMP/bundle/policy/data/platform/schema/data.json"
 
+      # The expected expression is assembled from parts: Actions would replace a literal one in
+      # this script with the job's secrets.
       - name: Caller at @v1 with PLATFORM_SECRETS
         run: |
           python3 - <<'PY'
           import yaml
           job = yaml.safe_load(open(".github/workflows/deploy.yml"))["jobs"]["platform"]
           assert job["uses"] == "shirtracer/platform-workflows/.github/workflows/app.yml@v1", job["uses"]
-          assert job["secrets"] == {"PLATFORM_SECRETS": "${{ toJSON(secrets) }}"}, job["secrets"]
+          assert job["secrets"] == {"PLATFORM_SECRETS": "$" + "{{ toJSON(secrets) }}"}, "PLATFORM_SECRETS"
+          assert job["if"] == "github.repository != 'shirtracer/platform-app-template'", job.get("if")
           PY
 
       - name: Workflow lint

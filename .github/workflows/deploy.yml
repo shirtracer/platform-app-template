@@ -28,6 +28,8 @@ permissions:
 
 jobs:
   platform:
+    # keep: does nothing in the template repository itself
+    if: github.repository != 'shirtracer/platform-app-template'
     uses: shirtracer/platform-workflows/.github/workflows/app.yml@v1
     with:
       action: ${{ inputs.action || 'deploy' }}
