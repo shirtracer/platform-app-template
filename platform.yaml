@@ -34,5 +34,5 @@ services: # change: the services you need
   s3: true
 
 # Your own secrets, names only. Values go into the repo's GitHub Environment "production".
-secrets: # change: your secret names
+secrets: # change: your secret names; list each in deploy/compose.yaml too (2 places)
   - EXAMPLE_API_KEY
