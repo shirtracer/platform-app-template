@@ -1,0 +1,60 @@
+---
+# Checks this template: the example passes the pinned policy, the editor schema is the bundle's,
+# the workflows lint. Runs only in shirtracer/platform-app-template; in a repository created from
+# the template it does nothing and may be deleted.
+name: template
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  # Same pin as POLICY_BUNDLE in shirtracer/platform-workflows (.github/workflows/app.yml at v1);
+  # changed by pull request with each policy release.
+  POLICY_BUNDLE: >-
+    ghcr.io/svenm3/platform-policy:2.1.0-rc.8@sha256:7a02ac00fed30df6339eb3542dde719461a869b2a58aac2d2694abb6234abe92
+  CONFTEST_IMAGE: >-
+    openpolicyagent/conftest:v0.70.1@sha256:82f23e0e1f3faf2f3798f4b1974676c1aed96b05c6656ec6820435c31867c532
+
+jobs:
+  template:
+    if: github.repository == 'shirtracer/platform-app-template'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The bundle is public: no registry login.
+      - name: Pull the policy bundle
+        run: |
+          docker run --rm -v "$RUNNER_TEMP:/out" -w /out \
+            "$CONFTEST_IMAGE" pull "oci://$POLICY_BUNDLE" -p bundle
+
+      - name: Policy check
+        run: |
+          docker run --rm --network none -v "$PWD:/app:ro" -v "$RUNNER_TEMP/bundle:/bundle:ro" -w /app \
+            "$CONFTEST_IMAGE" test --combine --no-color -p /bundle/policy -d /bundle/policy/data \
+            platform.yaml deploy/compose.yaml
+
+      - name: Editor schema equals the bundle's
+        run: cmp .platform/platform.schema.json "$RUNNER_TEMP/bundle/policy/data/platform/schema/data.json"
+
+      - name: Caller at @v1 with PLATFORM_SECRETS
+        run: |
+          python3 - <<'PY'
+          import yaml
+          job = yaml.safe_load(open(".github/workflows/deploy.yml"))["jobs"]["platform"]
+          assert job["uses"] == "shirtracer/platform-workflows/.github/workflows/app.yml@v1", job["uses"]
+          assert job["secrets"] == {"PLATFORM_SECRETS": "${{ toJSON(secrets) }}"}, job["secrets"]
+          PY
+
+      - name: Workflow lint
+        run: >-
+          docker run --rm -v "$PWD:/repo" -w /repo
+          rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+          -color

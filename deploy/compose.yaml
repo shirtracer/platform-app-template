@@ -1,0 +1,87 @@
+# The app's stack. The platform fills ${APP_IMAGE} (this commit's image), ${APP_HOST} (the
+# route's hostname) and ${APP_SECRETS} (where the credential files live); no other variables
+# are allowed. Lines marked "change:" are yours to edit; "keep:" lines bind the app to the
+# platform. Every rule, with a fix:
+# https://github.com/shirtracer/platform-workflows/blob/v1/docs/contract.md
+---
+name: myapp # change: app name
+
+services:
+  myapp-web: # change: <app name>-<suffix>
+    image: ${APP_IMAGE} # keep: the platform deploys this commit's image
+    read_only: true
+    tmpfs:
+      - /tmp
+    expose:
+      - "8080"
+    environment:
+      APP_NAME: myapp # change: app name
+      POSTGRES_HOST: storage-postgres
+      REDIS_HOST: storage-redis
+      S3_ENDPOINT: http://storage-silo:9000
+      S3_BUCKET: myapp # change: app name
+    # Credentials arrive as files under /run/secrets/<NAME>, never as variables.
+    secrets:
+      - DATABASE_URL
+      - REDIS_URL
+      - S3_ACCESS_KEY
+      - S3_SECRET_KEY
+      - EXAMPLE_API_KEY
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits: # change: at most 2 CPUs and 2 GiB per service, 4 CPUs and 8 GiB per app
+          cpus: "0.5"
+          memory: 256m
+    restart: unless-stopped
+    networks:
+      proxy: {} # keep: Traefik reaches the app here
+      storage: {} # keep: Postgres, Redis and Silo (only with services in platform.yaml)
+      apps: # keep: other apps reach this service by its alias below
+        aliases:
+          - myapp-web # change: <app name>-<suffix>
+      default: {}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: proxy
+      traefik.http.routers.myapp.rule: Host(`${APP_HOST}`) # change: router name = app name
+      traefik.http.routers.myapp.entrypoints: websecure # change: router name
+      traefik.http.routers.myapp.tls.certresolver: le # change: router name
+      traefik.http.routers.myapp.middlewares: authentik@file # change: router name; remove with auth none/oidc
+      traefik.http.routers.myapp.service: myapp # change: router and service name
+      traefik.http.services.myapp.loadbalancer.server.port: "8080" # change: service name
+      # Metrics (optional): the monitor scrapes this port over the apps network.
+      # platform.metrics.port: "9100" # change: your metrics port
+      # platform.metrics.path: /metrics # change: if not /metrics
+
+networks:
+  proxy:
+    external: true
+  storage:
+    external: true
+  apps:
+    external: true
+  default: {}
+
+# Each secret: the file the platform writes. Platform credentials (DATABASE_URL, REDIS_URL,
+# S3_*, OIDC_*) exist for the services in platform.yaml; others are your `secrets`.
+secrets:
+  DATABASE_URL:
+    file: ${APP_SECRETS}/DATABASE_URL
+  REDIS_URL:
+    file: ${APP_SECRETS}/REDIS_URL
+  S3_ACCESS_KEY:
+    file: ${APP_SECRETS}/S3_ACCESS_KEY
+  S3_SECRET_KEY:
+    file: ${APP_SECRETS}/S3_SECRET_KEY
+  EXAMPLE_API_KEY:
+    file: ${APP_SECRETS}/EXAMPLE_API_KEY

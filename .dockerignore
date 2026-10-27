@@ -1,0 +1,7 @@
+.git
+.github
+deploy
+.platform
+platform.yaml
+README.md
+**/__pycache__

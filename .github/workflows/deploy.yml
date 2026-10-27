@@ -1,0 +1,38 @@
+---
+# Deploys the app through the platform's reusable workflow: validate (policy), build and
+# push the image, send the deploy request. Pushes to main deploy; pull requests only
+# validate and build. Offboarding (removing the app) only by hand: Actions → deploy → Run
+# workflow → action "offboard" and the app name as confirmation.
+name: deploy
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy, or offboard to remove the app"
+        type: choice
+        options: [deploy, offboard]
+        default: deploy
+      confirm:
+        description: "Offboard only: type the app name"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  platform:
+    uses: shirtracer/platform-workflows/.github/workflows/app.yml@v1
+    with:
+      action: ${{ inputs.action || 'deploy' }}
+      confirm: ${{ inputs.confirm || '' }}
+    # keep: your secrets go to the platform workflow as one value (it takes only the names listed
+    # in platform.yaml); `secrets: inherit` would pass nothing to a workflow of another owner.
+    secrets:
+      PLATFORM_SECRETS: ${{ toJSON(secrets) }}

@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=./.platform/platform.schema.json
+---
+#
+# The app's manifest: what the platform provides for it. Lines marked "change:" are yours to
+# edit; read the docs before changing anything else:
+# https://github.com/shirtracer/platform-workflows/tree/v1/docs
+
+# change: your app name: lower-case letters and digits, starting with a letter, at most 31
+# characters, no "-". It names the route, database, Redis user, buckets and services.
+name: myapp # change: app name
+
+# The route is https://<name>.apps.platform.shirtracer.gmbh. A custom domain must be
+# allowlisted by the platform admin first; then set it here.
+# domain: shop.example.com
+
+# forward: the platform login (Authentik) runs before every request (default).
+# oidc:    the app logs users in itself with the platform's OIDC client (OIDC_CLIENT_* files).
+# none:    no platform login: public, or the app brings its own authentication.
+auth: forward # change: forward | oidc | none
+
+# Who may use the app (forward and oidc; leave out with auth none). Groups named <name>-<suffix>
+# are created for the app and their members managed by the managers below in the platform's
+# Authentik UI; other names are existing groups (access only). Unknown names fail the deploy.
+access: # change: your groups and managers
+  groups: [myapp-users] # change: e.g. [myapp-users, staff]
+  managers: [] # change: platform usernames, e.g. [alice]
+
+# The shared services this app uses. Remove a line to stop using a service: access is
+# revoked, the data is kept.
+services: # change: the services you need
+  postgres:
+    extensions: [] # change: e.g. [pg_trgm, citext] (allowed list: docs/services.md)
+  redis: true
+  s3: true
+
+# Your own secrets, names only. Values go into the repo's GitHub Environment "production".
+secrets: # change: your secret names
+  - EXAMPLE_API_KEY

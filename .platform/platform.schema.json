@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "platform.yaml",
+  "description": "App manifest for the shirtracer platform (specs/007-app-contract data-model \u00a71, specs/008-platform-controller data-model \u00a75).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name"
+  ],
+  "properties": {
+    "name": {
+      "description": "App name: lower-case letters and digits, starting with a letter, at most 31 characters, no '-'. Names the route, database, Redis user, buckets and services.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]{0,30}$",
+      "examples": [
+        "shop"
+      ]
+    },
+    "domain": {
+      "description": "Defaults to the app name (https://<name>.apps.<platform domain>). Any other value must be a full domain allowlisted for this app by the platform admin.",
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$",
+      "maxLength": 253,
+      "examples": [
+        "shop.example.com"
+      ]
+    },
+    "auth": {
+      "description": "forward: the platform login runs before every request. oidc: the app logs users in with its own OIDC client of the platform. none: no platform login (public, or the app's own authentication).",
+      "enum": [
+        "forward",
+        "oidc",
+        "none"
+      ],
+      "default": "forward",
+      "examples": [
+        "forward"
+      ]
+    },
+    "access": {
+      "description": "Who may use the app behind the platform login (required with auth forward or oidc, not allowed with none). Groups named <name>-<suffix> are created by the platform and owned by the app; other names must be existing groups and grant access only.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "groups"
+      ],
+      "properties": {
+        "groups": {
+          "description": "Groups whose members may use the app; <name>-* groups are created, others must exist.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+          },
+          "examples": [
+            [
+              "myapp-users",
+              "staff"
+            ]
+          ]
+        },
+        "managers": {
+          "description": "Existing platform usernames that manage the members of the app's own <name>-* groups in the Authentik UI; no other rights.",
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.@+-]{1,150}$"
+          },
+          "examples": [
+            [
+              "alice"
+            ]
+          ],
+          "default": []
+        }
+      },
+      "examples": [
+        {
+          "groups": [
+            "myapp-users"
+          ],
+          "managers": [
+            "alice"
+          ]
+        }
+      ]
+    },
+    "auth_callbacks": {
+      "description": "Only with auth oidc: extra redirect paths on the app's own host, besides /oauth2/callback; paths only, no '..'.",
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^/[A-Za-z0-9._~/-]{0,200}$"
+      },
+      "examples": [
+        [
+          "/auth/callback"
+        ]
+      ],
+      "default": []
+    },
+    "services": {
+      "description": "Shared services the app uses. Removing one revokes access and keeps the data.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "postgres": {
+          "description": "A database <name> owned by the app's role.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "extensions": {
+              "description": "Extensions from the platform's allowlist; removing one never drops it.",
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,62}$"
+              },
+              "examples": [
+                [
+                  "pg_trgm",
+                  "citext"
+                ]
+              ]
+            }
+          }
+        },
+        "redis": {
+          "description": "An ACL user <name> for keys and channels under <name>:.",
+          "type": "boolean",
+          "default": false
+        },
+        "s3": {
+          "description": "The bucket <name>; the app may create and delete buckets <name>-*.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "examples": [
+        {
+          "postgres": {
+            "extensions": [
+              "pg_trgm"
+            ]
+          },
+          "redis": true,
+          "s3": true
+        }
+      ]
+    },
+    "secrets": {
+      "description": "Names of the app's own secrets; values come from the repo's GitHub Environment.",
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 50,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+      },
+      "examples": [
+        [
+          "STRIPE_API_KEY"
+        ]
+      ],
+      "default": []
+    },
+    "deploy": {
+      "description": "Deploy behaviour.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rollback": {
+          "description": "Roll back to the last healthy version when a deploy does not become healthy (default true).",
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "examples": [
+        {
+          "rollback": false
+        }
+      ]
+    }
+  }
+}
