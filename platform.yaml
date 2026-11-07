@@ -13,6 +13,11 @@ name: myapp # change: app name
 # allowlisted by the platform admin first; then set it here.
 # domain: shop.example.com
 
+# The platform answers only requests from Germany. Paths that foreign services must call
+# (webhooks) can be opened, each with everything below it; never "/". Needs platform workflow
+# v1.0.5 or later. Docs: docs/operations.md, "Access from outside Germany".
+# abroad_paths: [/webhooks/stripe]
+
 # forward: the platform login (Authentik) runs before every request (default).
 # oidc:    the app logs users in itself with the platform's OIDC client (OIDC_CLIENT_* files).
 # none:    no platform login: public, or the app brings its own authentication.
