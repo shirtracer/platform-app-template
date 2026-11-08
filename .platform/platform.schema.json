@@ -106,6 +106,22 @@
       ],
       "default": []
     },
+    "abroad_paths": {
+      "description": "Paths on the app's own host reachable from outside Germany (webhooks of foreign services); a path opens itself and everything below it; not '/', no '.' or '..' segments.",
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^/[A-Za-z0-9._~/-]{0,200}$"
+      },
+      "examples": [
+        [
+          "/webhooks/stripe"
+        ]
+      ],
+      "default": []
+    },
     "services": {
       "description": "Shared services the app uses. Removing one revokes access and keeps the data.",
       "type": "object",
